@@ -1,91 +1,71 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import Box from './Box/Box';
 import ContactForm from './ContactForm/ContactForm';
 import ContactList from './ContactList/ContactList';
 import Filter from './Filter/Filter';
 import Section from './Section/Section';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
+function App() {
+  const [contacts, setContacts] = useState(
+    JSON.parse(localStorage.getItem('contacts')) || []
+  );
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    const ourContacts = localStorage.getItem('contacts');
+    if (ourContacts) {
+      setContacts(JSON.parse(ourContacts));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const onSubmit = (name, number) => {
+    if (
+      contacts.find(
+        contact => contact.name.toLowerCase() === name.toLowerCase()
+      )
+    ) {
+      return toast.error(`${name} is already in contacts.`);
+    }
+    setContacts(prevState => [...prevState, { id: nanoid(), name, number }]);
   };
 
-  componentDidMount() {
-    if (localStorage.getItem('contacts')) {
-      this.setState(() => {
-        return {
-          contacts: [...JSON.parse(localStorage.getItem('contacts'))],
-        };
-      });
-    }
-  }
+  const handleRemoveContact = id =>
+    setContacts(prevState => prevState.filter(contact => contact.id !== id));
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contact !== this.state.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
-
-  onSubmit = (subName, subNumber) => {
-    if (this.state.contacts.find(contact => contact.name === subName)) {
-      return alert(`${subName} is already in contacts.`);
-    }
-    this.setState(PreviousState => {
-      return {
-        contacts: [
-          ...PreviousState.contacts,
-          {
-            id: nanoid(),
-            name: subName,
-            number: subNumber,
-          },
-        ],
-      };
-    });
+  const handleFilterChange = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  handleRemoveContact = id =>
-    this.setState(({ contacts }) => ({
-      contacts: contacts.filter(contact => contact.id !== id),
-    }));
-
-  handleFilterChange = filter => this.setState({ filter });
-
-  visibleContacts = () => {
-    const { contacts, filter } = this.state;
+  const visibleContacts = () => {
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(filter.toLowerCase())
     );
   };
-
-  render() {
-    const { filter } = this.state;
-    const visibleContacts = this.visibleContacts();
-
-    return (
-      <Box>
-        <Section title="PhoneBook">
-          <ContactForm onSubmit={this.onSubmit} />
+  return (
+    <Box>
+      <Section title="PhoneBook">
+        <ToastContainer />
+        <ContactForm onSubmit={onSubmit} />
+      </Section>
+      <div>
+        <Section title="Contacts">
+          <Filter onChange={handleFilterChange} />
+          <ContactList
+            onRemove={handleRemoveContact}
+            contacts={visibleContacts()}
+          />
         </Section>
-        <div>
-          <Section title="Contacts">
-            <Filter filter={filter} onChange={this.handleFilterChange} />
-            <ContactList
-              onRemove={this.handleRemoveContact}
-              contacts={visibleContacts}
-            />
-          </Section>
-        </div>
-      </Box>
-    );
-  }
+      </div>
+    </Box>
+  );
 }
 
 export default App;
